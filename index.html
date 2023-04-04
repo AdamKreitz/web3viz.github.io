@@ -79,9 +79,9 @@
             const minTvl = Math.min(d.source.tvl, d.target.tvl);
             const scaleFactor = Math.sqrt(minTvl) * 0.5;
             if (d.source.type === 'avalanche' || d.target.type === 'avalanche') {
-                return 500 + (scaleFactor * 20); // Set distance between central node and branches based on the minimum TVL value between the source and target nodes
+                return 400 + (scaleFactor * 10); // Set distance between central node and branches based on the minimum TVL value between the source and target nodes
             } else {
-                return 200 + (scaleFactor * 20); // Set distance between branches and leaves based on the minimum TVL value between the source and target nodes
+                return 150 + (scaleFactor * 10); // Set distance between branches and leaves based on the minimum TVL value between the source and target nodes
             }
         })
     )
