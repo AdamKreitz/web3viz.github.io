@@ -109,7 +109,7 @@ const node = svg.append("g")
     );
 
     node.append("circle")
-            .attr("r", d => Math.sqrt(d.tvl) * 10) // Adjust the size based on the TVL
+            .attr("r", d => Math.sqrt(d.tvl) * 5) // Adjust the size based on the TVL
             .attr("fill", d => {
                 switch (d.type) {
                     case "avalanche":
