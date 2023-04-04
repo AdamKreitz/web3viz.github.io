@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3 Network Chart</title>
+    <style>
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+
+        .node {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+        const width = 3000;
+        const height = 2500;
+
+        // Create the SVG container
+        const svg = d3.select("body")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Example data for Avalanche, app niches, and apps with their respective TVL
+        const data = {
+        avalanche: { id: "Avalanche", tvl: 1110 },
+        niches: [
+            { id: "Credit/Lending", tvl: 556 },
+            { id: "Derivatives/Options", tvl: 104 },
+            { id: "Dexes", tvl: 153.5 },
+            { id: "Yield", tvl: 146 },
+            { id: "Cross Chain", tvl: 34 },
+        ],
+        apps: [
+            { id: "Aave", niche: "Credit/Lending", tvl: 287 },
+            { id: "Benqi", niche: "Credit/Lending", tvl: 255 },
+            { id: "Yeti", niche: "Credit/Lending", tvl: 14 },
+            { id: "GMX", niche: "Derivatives/Options", tvl: 101 },
+            { id: "Hubble", niche: "Derivatives/Options", tvl: 3.2 },
+            { id: "Trader Joe", niche: "Dexes", tvl: 96 },
+            { id: "Curve", niche: "Dexes", tvl: 18 },
+            { id: "Pangolin", niche: "Dexes", tvl: 27 },
+            { id: "Kyberswap", niche: "Dexes", tvl: 12.5 },
+            { id: "Platypus Finance", niche: "Yield", tvl: 34 },
+            { id: "Yield Yak", niche: "Yield", tvl: 41 },
+            { id: "Vector Finance", niche: "Yield", tvl: 37 },
+            { id: "Beefy", niche: "Yield", tvl: 17 },
+            { id: "Delta Prime", niche: "Yield", tvl: 17 },
+            { id: "Stargate", niche: "Cross Chain", tvl: 34 },
+            
+            // ... more apps
+        ],
+        };
+
+        // Generate the nodes and links
+        const nodes = [
+        { ...data.avalanche, type: "avalanche" },
+        ...data.niches.map(niche => ({ ...niche, type: "niche" })),
+        ...data.apps.map(app => ({ ...app, type: "app" })),
+        ];
+
+        const links = [
+        ...data.niches.map(niche => ({ source: "Avalanche", target: niche.id })),
+        ...data.apps.map(app => ({ source: app.niche, target: app.id })),
+        ];
+
+        // Create a simulation for the nodes and links
+        const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links)
+        .id(d => d.id)
+        .distance(d => {
+            const minTvl = Math.min(d.source.tvl, d.target.tvl);
+            const scaleFactor = Math.sqrt(minTvl) * 0.5;
+            if (d.source.type === 'avalanche' || d.target.type === 'avalanche') {
+                return 500 + (scaleFactor * 20); // Set distance between central node and branches based on the minimum TVL value between the source and target nodes
+            } else {
+                return 200 + (scaleFactor * 20); // Set distance between branches and leaves based on the minimum TVL value between the source and target nodes
+            }
+        })
+    )
+    .force("charge", d3.forceManyBody().strength(-400))
+    .force("center", d3.forceCenter(width / 2, height / 2));
+
+        // Create the link elements
+        const link = svg.append("g")
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("class", "link")
+            .attr("stroke-width", 2);
+
+        // Create the node elements
+const node = svg.append("g")
+    .selectAll("g")
+    .data(nodes)
+    .join("g")
+    .attr("class", "node")
+    .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended)
+    );
+
+    node.append("circle")
+            .attr("r", d => Math.sqrt(d.tvl) * 10) // Adjust the size based on the TVL
+            .attr("fill", d => {
+                switch (d.type) {
+                    case "avalanche":
+                        return "red";
+                    case "niche":
+                        return "green";
+                    case "app":
+                        return "blue";
+                    default:
+                        return "black";
+                }
+            })
+
+function nodeClicked(id) {
+    let url;
+    switch (id) {
+        case "Credit/Lending":
+            url = "./credit-lending.html";
+            break;
+        case "Dexes":
+            url = "./dexes.html";
+            break;
+        case "Yield":
+            url = "./yield.html";
+            break;
+        case "Derivatives/Options":
+            url = "./derivatives-options.html";
+            break;
+        case "Cross Chain":
+            url = "./cross-chain.html";
+            break;
+        default:
+            return; // If the clicked node is not one of the specified niches, do nothing
+    }
+    window.open(url, '_blank');
+}
+    // Add labels to the nodes
+    node.append("text")
+        .attr("font-family", "sans-serif")
+        .attr("font-size", 48)
+        .attr("text-anchor", "middle")
+        .attr("dy", ".35em")
+        .text(d => d.id);
+
+    // Update the positions of nodes, links, and labels on each simulation tick
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node
+            .attr("transform", d => `translate(${d.x}, ${d.y})`);
+    });
+
+    // Drag functions
+    let isDragging = false;
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+        isDragging = false;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+        isDragging = true;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    let clickTimer = null;
+
+    let singleClickTimeout;
+
+node.select("circle").on("click", (event, d) => {
+    if (singleClickTimeout) {
+        clearTimeout(singleClickTimeout);
+        singleClickTimeout = null;
+    } else {
+        singleClickTimeout = setTimeout(() => {
+            singleClickTimeout = null;
+        }, 250);
+    }
+});
+
+node.select("circle").on("dblclick", (event, d) => {
+    if (singleClickTimeout) {
+        clearTimeout(singleClickTimeout);
+        singleClickTimeout = null;
+    }
+    if (!isDragging) {
+        nodeClicked(d.id);
+    }
+});
+    </script>
+</body>
+</html>
