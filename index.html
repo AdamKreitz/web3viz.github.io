@@ -10,8 +10,14 @@
             stroke-opacity: 0.6;
         }
 
+        .node text {
+    fill: black;
+    text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+}
+
+
         .node {
-            stroke: #fff;
+            stroke: black;
             stroke-width: 1.5px;
         }
 
@@ -20,15 +26,123 @@
             background-color: rgba(55, 55, 55, 0.9);
             border-radius: 30px;
             color: white;
-            font-size: 38px;
+            font-size: 20px;
             padding: 10px;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.2s ease-in-out;
         }
+
+         /* Navigation Menu */
+         .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 999;
+        }
+
+        .navbar button {
+            font-size: 18px;
+            padding: 5px 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .navbar button:hover {
+            background-color: #e9ecef;
+        }
+
+        .nav-button {
+  font-size: 18px;
+  padding: 10px 20px;
+  margin: 0 10px;
+  text-decoration: none;
+  border: 2px solid #000000 !important;
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.nav-button.avalanche {
+  background-color: red;
+}
+
+.nav-button.polygon {
+  background-color: purple;
+}
+
+.nav-button.arbitrum {
+  background-color: blue;
+}
+
+.nav-button.bsc {
+  background-color: gold;
+}
+
+.nav-button:hover {
+  opacity: 0.7;
+}
+
+
+.info-panel {
+  position: absolute;
+  left: 30px; /* Adjust left positioning */
+  top: 50%; /* Position the panel at the vertical center of the page */
+  transform: translateY(-50%); /* Center the panel relative to its own height */
+  width: 250px; /* Adjust width as needed */
+  padding: 20px;
+  background-color: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 10px;
+  font-size: 16px;
+  z-index: 10; /* Ensure the panel stays above other elements */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for a nicer appearance */
+}
+
+.info-panel h3 {
+  margin-bottom: 10px;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.info-panel ul {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+.info-panel li {
+  margin-bottom: 15px;
+}
+
+
+
     </style>
 </head>
 <body>
+     <!-- Add navigation menu -->
+     <div class="navbar">
+        <button class="nav-button avalanche" onclick="window.location.href='avalanche.html'">Avalanche</button>
+        <button class="nav-button polygon" onclick="window.location.href='polygon.html'">Polygon</button>
+        <button class="nav-button arbitrum" onclick="window.location.href='arbitrum.html'">Arbitrum</button>
+        <button class="nav-button bsc" onclick="window.location.href='bsc.html'">BSC</button>
+      </div>
+
+      <div class="info-panel">
+        <h3>Navigation Instructions</h3>
+        <ul>
+          <li>Hover over nodes to see the total value locked in the protocol/chain/app niche.</li>
+          <li>Click on the app niches for more details about what those applications do and their TVL dominance on each blockchain.</li>
+        </ul>
+      </div>
+      
+
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <script>
 
@@ -120,9 +234,9 @@ const nodes = [
             const minTvl = Math.min(d.source.tvl, d.target.tvl);
             const scaleFactor = Math.sqrt(minTvl) * 0.5;
             if (d.source.type === 'avalanche' || d.target.type === 'avalanche') {
-                return 500 + (scaleFactor * 20); // Set distance between central node and branches based on the minimum TVL value between the source and target nodes
+                return 150 + (scaleFactor * 3); // Set distance between central node and branches based on the minimum TVL value between the source and target nodes
             } else {
-                return 200 + (scaleFactor * 20); // Set distance between branches and leaves based on the minimum TVL value between the source and target nodes
+                return 80 + (scaleFactor * 15); // Set distance between branches and leaves based on the minimum TVL value between the source and target nodes
             }
         })
     )
@@ -150,7 +264,7 @@ const node = svg.append("g")
     );
 
     node.append("circle")
-            .attr("r", d => Math.sqrt(d.tvl) * Math.sqrt(Math.sqrt(width))* 1.5)  // Adjust the size based on the TVL
+            .attr("r", d => Math.sqrt(d.tvl) * Math.sqrt(Math.sqrt(width))/1.5)  // Adjust the size based on the TVL
             .attr("fill", d => {
                 switch (d.type) {
                     case "avalanche":
@@ -190,7 +304,7 @@ function nodeClicked(id) {
     // Add labels to the nodes
     node.append("text")
         .attr("font-family", "sans-serif")
-        .attr("font-size", 48)
+        .attr("font-size", 16)
         .attr("text-anchor", "middle")
         .attr("dy", ".35em")
         .text(d => d.id);
@@ -275,25 +389,38 @@ node.select("circle")
             { label: "App", color: "blue" },
         ];
 
-        legend.selectAll("rect")
-            .data(legendData)
-            .enter()
-            .append("rect")
-            .attr("x", 0)
-            .attr("y", (d, i) => i * 60)
-            .attr("width", 50)
-            .attr("height", 50)
-            .attr("fill", d => d.color);
+        // Add a border around the legend
+legend.append("rect")
+    .attr("width", 180) // Adjust the width as needed
+    .attr("height", legendData.length * 40 + 10) // Adjust the height as needed
+    .attr("fill", "white")
+    .attr("stroke", "black")
+    .attr("stroke-width", 2);
 
-        legend.selectAll("text")
-            .data(legendData)
-            .enter()
-            .append("text")
-            .attr("x", 65)
-            .attr("y", (d, i) => i * 60)
-            .attr("dy", "1.1em")
-            .attr("font-size", 30)
-            .text(d => d.label);
+// Add legend items
+legend.selectAll("rect.color")
+    .data(legendData)
+    .enter()
+    .append("rect")
+    .attr("class", "color")
+    .attr("x", 10)
+    .attr("y", (d, i) => i * 40 + 10)
+    .attr("width", 30)
+    .attr("height", 30)
+    .attr("fill", d => d.color)
+    .attr("stroke", "black") // Add a border to each color
+    .attr("stroke-width", 2); // Adjust border width as needed
+
+legend.selectAll("text.label")
+    .data(legendData)
+    .enter()
+    .append("text")
+    .attr("class", "label")
+    .attr("x", 50)
+    .attr("y", (d, i) => i * 40 + 10)
+    .attr("dy", "1.1em")
+    .attr("font-size", 20)
+    .text(d => d.label);
     </script>
 </body>
 </html>
