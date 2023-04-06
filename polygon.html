@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3 Network Chart</title>
+    <style>
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+
+        .node text {
+    fill: black;
+    text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+}
+
+
+        .node {
+            stroke: black;
+            stroke-width: 1.5px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: rgba(55, 55, 55, 0.9);
+            border-radius: 30px;
+            color: white;
+            font-size: 20px;
+            padding: 10px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+         /* Navigation Menu */
+         .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 999;
+        }
+
+        .navbar button {
+            font-size: 18px;
+            padding: 5px 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .navbar button:hover {
+            background-color: #e9ecef;
+        }
+
+        .nav-button {
+  font-size: 18px;
+  padding: 10px 20px;
+  margin: 0 10px;
+  text-decoration: none;
+  border: 2px solid #000000 !important;
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.nav-button.avalanche {
+  background-color: red;
+}
+
+.nav-button.polygon {
+  background-color: purple;
+}
+
+.nav-button.arbitrum {
+  background-color: blue;
+}
+
+.nav-button.bsc {
+  background-color: gold;
+}
+
+.nav-button:hover {
+  opacity: 0.7;
+}
+
+.info-panel {
+  position: absolute;
+  left: 30px; /* Adjust left positioning */
+  top: 50%; /* Position the panel at the vertical center of the page */
+  transform: translateY(-50%); /* Center the panel relative to its own height */
+  width: 250px; /* Adjust width as needed */
+  padding: 20px;
+  background-color: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 10px;
+  font-size: 16px;
+  z-index: 10; /* Ensure the panel stays above other elements */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for a nicer appearance */
+}
+
+.info-panel h3 {
+  margin-bottom: 10px;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.info-panel ul {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+.info-panel li {
+  margin-bottom: 15px;
+}
+
+
+    </style>
+</head>
+<body>
+     <!-- Add navigation menu -->
+     <div class="navbar">
+        <button class="nav-button avalanche" onclick="window.location.href='avalanche.html'">Avalanche</button>
+        <button class="nav-button polygon" onclick="window.location.href='polygon.html'">Polygon</button>
+        <button class="nav-button arbitrum" onclick="window.location.href='arbitrum.html'">Arbitrum</button>
+        <button class="nav-button bsc" onclick="window.location.href='bsc.html'">BSC</button>
+      </div>
+
+      <div class="info-panel">
+        <h3>Navigation Instructions</h3>
+        <ul>
+          <li>Hover over nodes to see the total value locked in the protocol/chain/app niche.</li>
+          <li>Click on the app niches for more details about what those applications do and their TVL dominance on each blockchain.</li>
+        </ul>
+      </div>
+      
+
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+
+
+function formatTVL(tvl) {
+    if (tvl >= 1e3) {
+        return `$${(tvl / 1e3).toLocaleString()} billion`;
+    } else {
+        return `$${(tvl).toLocaleString()} million`;
+    }
+}
+        // const width = 3000;
+        // const height = 2500;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // Create the SVG container
+        const svg = d3.select("body")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip");
+
+        // Example data for Avalanche, app niches, and apps with their respective TVL
+        const data = {
+        polygon: { id: "Polygon", tvl: 1340 },
+        niches: [
+            { id: "Credit/Lending", tvl: 360.5 },
+            { id: "Derivatives/Options", tvl: 22.5 },
+            { id: "Dexes", tvl: 521 },
+            { id: "Yield", tvl: 177 },
+            { id: "Cross Chain", tvl: 40 },
+            { id: "Reserve Currency", tvl: 38},
+            { id: "Real-World Assets", tvl: 44.5},
+        ],
+        apps: [
+            { id: "Aave", niche: "Credit/Lending", tvl: 321 },
+            { id: "QiDao", niche: "Credit/Lending", tvl: 27.5 },
+            { id: "Compound", niche: "Credit/Lending", tvl: 12 },
+            { id: "Gains Network", niche: "Derivatives/Options", tvl: 15 },
+            { id: "Metavault", niche: "Derivatives/Options", tvl: 7.5 },
+            { id: "Quickswap", niche: "Dexes", tvl: 159 },
+            { id: "Balancer", niche: "Dexes", tvl: 109 },
+            { id: "Uniswap", niche: "Dexes", tvl: 98 },
+            { id: "Curve", niche: "Dexes", tvl: 47 },
+            { id: "Sushiswap", niche: "Dexes", tvl: 33 },
+            { id: "Meshswap", niche: "Dexes", tvl: 22 },
+            { id: "Kyberswap", niche: "Dexes", tvl: 21 },
+            { id: "Dfyn Network", niche: "Dexes", tvl: 18 },
+            { id: "Satin Exchange", niche: "Dexes", tvl: 14 },
+            { id: "Beefy", niche: "Yield", tvl: 68 },
+            { id: "Tetu", niche: "Yield", tvl: 52 },
+            { id: "Gamma", niche: "Yield", tvl: 40 },
+            { id: "Convex", niche: "Yield", tvl: 17 },
+            { id: "Klima DAO", niche: "Reserve Currency", tvl: 38 },
+            { id: "Toucan Protocol", niche: "Real-World Assets", tvl: 28 },
+            { id: "Tangible", niche: "Real-World Assets", tvl: 16.5 },
+            { id: "Stargate", niche: "Cross Chain", tvl: 40 },
+            
+            // ... more apps
+        ],
+        };
+
+        data.niches.forEach(niche => {
+    niche.apps = data.apps.filter(app => app.niche === niche.id);
+});
+
+
+        // Generate the nodes and links
+const angleStep = (2 * Math.PI) / data.niches.length;
+const nodes = [
+  { ...data.polygon, type: "polygon" },
+  ...data.niches.map((niche, i) => ({ ...niche, type: "niche" })),
+  ...data.apps.map((app, i) => ({ ...app, type: "app" })),
+];
+
+const links = data.niches.flatMap(niche => [
+  { source: data.polygon.id, target: niche.id },
+  ...niche.apps.map(app => ({ source: niche.id, target: app.id })),
+]);
+
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links)
+    .id(d => d.id)
+    .distance(d => {
+      if (d.source.type === 'polygon' || d.target.type === 'polygon') {
+        return 200; // Set fixed distance between central node and branches
+      } else {
+        const minTvl = Math.min(d.source.tvl, d.target.tvl);
+        const scaleFactor = Math.sqrt(minTvl) * 0.5;
+        return 70 + (scaleFactor * 15); // Set distance between branches and leaves based on the minimum TVL value between the source and target nodes
+      }
+    })
+  )
+  .force("charge", d3.forceManyBody().strength(-200))
+  .force("center", d3.forceCenter(width / 2, height / 2))
+  .force("radial", d3.forceRadial(d => {
+    if (d.type === "polygon") return 0;
+    if (d.type === "niche") return 200;
+    return 400;
+  }, width / 2, height / 2));
+
+        // Create the link elements
+        const link = svg.append("g")
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("class", "link")
+            .attr("stroke-width", 2);
+
+// Create the node elements
+const node = svg.append("g")
+            .selectAll("g")
+            .data(nodes)
+            .join("g")
+            .attr("class", "node")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended)
+            );
+
+        node.append("circle")
+            .attr("r", d => Math.sqrt(d.tvl) * Math.sqrt(Math.sqrt(width))/1.5)  // Adjust the size based on the TVL
+            .attr("fill", d => {
+                switch (d.type) {
+                    case "polygon": // Change "avalanche" to "polygon"
+                        return "purple"; // Update the fill color if desired
+                    case "niche":
+                        return "green";
+                    case "app":
+                        return "blue";
+                    default:
+                        return "black";
+                }
+            });
+
+function nodeClicked(id) {
+    let url;
+    switch (id) {
+        case "Credit/Lending":
+            url = "./credit-lending.html";
+            break;
+        case "Dexes":
+            url = "./dexes.html";
+            break;
+        case "Yield":
+            url = "./yield.html";
+            break;
+        case "Derivatives/Options":
+            url = "./derivatives-options.html";
+            break;
+        case "Cross Chain":
+            url = "./cross-chain.html";
+            break;
+        default:
+            return; // If the clicked node is not one of the specified niches, do nothing
+    }
+    window.open(url, '_blank');
+}
+    // Add labels to the nodes
+node.append("text")
+    .style("font-family", "sans-serif")
+    .style("font-size", "16px")
+    .style("fill", "black")
+    .attr("text-anchor", "middle")
+    .attr("dy", ".35em")
+    .text(d => d.id);
+
+    // Update the positions of nodes, links, and labels on each simulation tick
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node
+            .attr("transform", d => `translate(${d.x}, ${d.y})`);
+    });
+
+    // Drag functions
+    let isDragging = false;
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+        isDragging = false;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+        isDragging = true;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    let clickTimer = null;
+
+    let singleClickTimeout;
+
+node.select("circle").on("click", (event, d) => {
+    if (singleClickTimeout) {
+        clearTimeout(singleClickTimeout);
+        singleClickTimeout = null;
+    } else {
+        singleClickTimeout = setTimeout(() => {
+            singleClickTimeout = null;
+        }, 250);
+    }
+});
+
+node.select("circle").on("dblclick", (event, d) => {
+    if (singleClickTimeout) {
+        clearTimeout(singleClickTimeout);
+        singleClickTimeout = null;
+    }
+    if (!isDragging) {
+        nodeClicked(d.id);
+    }
+});
+
+// Add hover functionality for the nodes to show TVL formatted as millions or billions
+node.select("circle")
+    .on("mouseover", (event, d) => {
+        tooltip.style("opacity", 1);
+        tooltip.html(`<strong>TVL:</strong> ${formatTVL(d.tvl)}`)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px");
+    })
+    .on("mouseout", (event, d) => {
+        tooltip.style("opacity", 0);
+    });
+
+        // Create the legend
+        const legend = svg.append("g")
+            .attr("transform", `translate(${width - 250}, 20)`);
+
+        const legendData = [
+            { label: "Polygon", color: "purple" },
+            { label: "Niche", color: "green" },
+            { label: "App", color: "blue" },
+        ];
+
+        // Add a border around the legend
+legend.append("rect")
+    .attr("width", 180) // Adjust the width as needed
+    .attr("height", legendData.length * 40 + 10) // Adjust the height as needed
+    .attr("fill", "white")
+    .attr("stroke", "black")
+    .attr("stroke-width", 2);
+
+// Add legend items
+legend.selectAll("rect.color")
+    .data(legendData)
+    .enter()
+    .append("rect")
+    .attr("class", "color")
+    .attr("x", 10)
+    .attr("y", (d, i) => i * 40 + 10)
+    .attr("width", 30)
+    .attr("height", 30)
+    .attr("fill", d => d.color)
+    .attr("stroke", "black") // Add a border to each color
+    .attr("stroke-width", 2); // Adjust border width as needed
+
+legend.selectAll("text.label")
+    .data(legendData)
+    .enter()
+    .append("text")
+    .attr("class", "label")
+    .attr("x", 50)
+    .attr("y", (d, i) => i * 40 + 10)
+    .attr("dy", "1.1em")
+    .attr("font-size", 20)
+    .text(d => d.label);
+    </script>
+</body>
+</html>
