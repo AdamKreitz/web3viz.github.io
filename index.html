@@ -14,19 +14,46 @@
             stroke: #fff;
             stroke-width: 1.5px;
         }
+
+        .tooltip {
+            position: absolute;
+            background-color: rgba(55, 55, 55, 0.9);
+            border-radius: 30px;
+            color: white;
+            font-size: 38px;
+            padding: 10px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
     </style>
 </head>
 <body>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <script>
-        const width = 3000;
-        const height = 2500;
+
+
+function formatTVL(tvl) {
+    if (tvl >= 1e3) {
+        return `$${(tvl / 1e3).toLocaleString()} billion`;
+    } else {
+        return `$${(tvl).toLocaleString()} million`;
+    }
+}
+        // const width = 3000;
+        // const height = 2500;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
 
         // Create the SVG container
         const svg = d3.select("body")
             .append("svg")
             .attr("width", width)
             .attr("height", height);
+
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip");
 
         // Example data for Avalanche, app niches, and apps with their respective TVL
         const data = {
@@ -60,11 +87,25 @@
         };
 
         // Generate the nodes and links
-        const nodes = [
-        { ...data.avalanche, type: "avalanche" },
-        ...data.niches.map(niche => ({ ...niche, type: "niche" })),
-        ...data.apps.map(app => ({ ...app, type: "app" })),
-        ];
+        const angleStep = (2 * Math.PI) / data.niches.length;
+const nodes = [
+  { ...data.avalanche, type: "avalanche" },
+  ...data.niches.map((niche, i) => ({
+    ...niche,
+    type: "niche",
+    x: width / 2 + 500 * Math.cos(angleStep * i),
+    y: height / 2 + 500 * Math.sin(angleStep * i),
+  })),
+  ...data.apps.map((app, i) => ({
+    ...app,
+    type: "app",
+    x: width / 2 + 800 * Math.cos((i / data.apps.length) * 2 * Math.PI),
+    y: height / 2 + 800 * Math.sin((i / data.apps.length) * 2 * Math.PI),
+  })),
+];
+
+
+
 
         const links = [
         ...data.niches.map(niche => ({ source: "Avalanche", target: niche.id })),
@@ -79,9 +120,9 @@
             const minTvl = Math.min(d.source.tvl, d.target.tvl);
             const scaleFactor = Math.sqrt(minTvl) * 0.5;
             if (d.source.type === 'avalanche' || d.target.type === 'avalanche') {
-                return 300 + (scaleFactor * 5); // Set distance between central node and branches based on the minimum TVL value between the source and target nodes
+                return 500 + (scaleFactor * 20); // Set distance between central node and branches based on the minimum TVL value between the source and target nodes
             } else {
-                return 150 + (scaleFactor * 10); // Set distance between branches and leaves based on the minimum TVL value between the source and target nodes
+                return 200 + (scaleFactor * 20); // Set distance between branches and leaves based on the minimum TVL value between the source and target nodes
             }
         })
     )
@@ -96,7 +137,7 @@
             .attr("class", "link")
             .attr("stroke-width", 2);
 
-        // Create the node elements
+// Create the node elements
 const node = svg.append("g")
     .selectAll("g")
     .data(nodes)
@@ -109,7 +150,7 @@ const node = svg.append("g")
     );
 
     node.append("circle")
-            .attr("r", d => Math.sqrt(d.tvl) * 6) // Adjust the size based on the TVL
+            .attr("r", d => Math.sqrt(d.tvl) * Math.sqrt(Math.sqrt(width))* 1.5)  // Adjust the size based on the TVL
             .attr("fill", d => {
                 switch (d.type) {
                     case "avalanche":
@@ -211,6 +252,48 @@ node.select("circle").on("dblclick", (event, d) => {
         nodeClicked(d.id);
     }
 });
+
+// Add hover functionality for the nodes to show TVL formatted as millions or billions
+node.select("circle")
+    .on("mouseover", (event, d) => {
+        tooltip.style("opacity", 1);
+        tooltip.html(`<strong>TVL:</strong> ${formatTVL(d.tvl)}`)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px");
+    })
+    .on("mouseout", (event, d) => {
+        tooltip.style("opacity", 0);
+    });
+
+        // Create the legend
+        const legend = svg.append("g")
+            .attr("transform", `translate(${width - 250}, 20)`);
+
+        const legendData = [
+            { label: "Avalanche", color: "red" },
+            { label: "Niche", color: "green" },
+            { label: "App", color: "blue" },
+        ];
+
+        legend.selectAll("rect")
+            .data(legendData)
+            .enter()
+            .append("rect")
+            .attr("x", 0)
+            .attr("y", (d, i) => i * 60)
+            .attr("width", 50)
+            .attr("height", 50)
+            .attr("fill", d => d.color);
+
+        legend.selectAll("text")
+            .data(legendData)
+            .enter()
+            .append("text")
+            .attr("x", 65)
+            .attr("y", (d, i) => i * 60)
+            .attr("dy", "1.1em")
+            .attr("font-size", 30)
+            .text(d => d.label);
     </script>
 </body>
 </html>
