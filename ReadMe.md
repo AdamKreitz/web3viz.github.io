@@ -1,5 +1,8 @@
 ### About
 
+## Link to Website:
+https://adamkreitz.github.io/web3viz.github.io/
+
 By: Adam Kreitzman, Sean Lo, and Carolyn Lim
 
 ### About the Visualization
